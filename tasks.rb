@@ -18,9 +18,16 @@ def create_hpxmls
 
   schema_path = File.join(File.dirname(__FILE__), 'HPXMLtoOpenStudio', 'resources', 'hpxml_schema', 'HPXML.xsd')
   schema_validator = XMLValidator.get_schema_validator(schema_path)
+  schematron_path = File.join(File.dirname(__FILE__), 'HPXMLtoOpenStudio/resources/hpxml_schematron/EPvalidator.xml')
+  schematron_validator = XMLValidator.get_schematron_validator(schematron_path)
 
   schedules_regenerated = []
-
+  
+  # Create all unique xpaths used in the HPXML files
+  xpath_xslt_path = File.join(File.dirname(__FILE__), 'HPXMLtoOpenStudio', 'resources', 'hpxml_schema', 'all_xpaths.xslt')
+  xpath_validator = OpenStudio::XMLValidator.new(xpath_xslt_path)
+  all_xpaths = [] #
+  
   puts "Generating #{json_inputs.size} HPXML files..."
 
   json_inputs.keys.each_with_index do |hpxml_filename, i|
@@ -83,7 +90,7 @@ def create_hpxmls
       apply_hpxml_modification(File.basename(hpxml_path), hpxml)
     end
     hpxml_doc = hpxml.to_oga()
-
+    
     if hpxml_path.include? 'base-multiple-buildings.xml'
       # HPXML class doesn't support multiple buildings, so we'll stitch together manually.
       hpxml_element = XMLHelper.get_element(hpxml_doc, '/HPXML')
@@ -107,6 +114,14 @@ def create_hpxmls
     end
 
     XMLHelper.write_file(hpxml_doc, hpxml_path)
+    
+    # Get xpaths for this HPXML
+    xpath_validator.validate(hpxml_path)
+    Oga.parse_xml(xpath_validator.fullValidationReport.get).to_xml.split do |xpath|
+      next if all_xpaths.include? xpath
+
+      all_xpaths << xpath
+    end
 
     errors, _warnings = XMLValidator.validate_against_schema(hpxml_path, schema_validator)
     next unless errors.size > 0
@@ -115,6 +130,8 @@ def create_hpxmls
     puts "\nError: Did not successfully validate #{hpxml_filename}."
     exit!
   end
+  
+  File.write("all_xpaths.txt", all_xpaths.sort.join("\n"))
 
   puts "\n"
 
@@ -2209,7 +2226,7 @@ def download_utility_rates
   exit!
 end
 
-command_list = [:update_measures, :update_hpxmls, :create_release_zips, :download_utility_rates]
+command_list = [:update_measures, :update_hpxmls, :create_release_zips, :download_utility_rates, :create_xpaths_file]
 
 def display_usage(command_list)
   puts "Usage: openstudio #{File.basename(__FILE__)} [COMMAND]\nCommands:\n  " + command_list.join("\n  ")
