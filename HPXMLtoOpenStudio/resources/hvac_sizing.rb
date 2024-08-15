@@ -1684,13 +1684,19 @@ module HVACSizing
   # Returns the ACCA Manual S sizing allowances for a given type of HVAC equipment.
   # These sizing allowances are used in the logic that determines how to convert heating/cooling
   # design loads into corresponding equipment capacities.
+  # New ACCA Manual S specifies different size limits depending on the sizing condition (Standard, Dry, Variable Speed, etc.) 
   #
   # @param hvac_cooling [HPXML::CoolingSystem or HPXML::HeatPump] The cooling portion of the current HPXML HVAC system
-  # @return [Array<Double, Double, Double>] Oversize fraction (frac), oversize delta (Btu/hr), undersize fraction (frac)
-  def self.get_hvac_size_limits(hvac_cooling)
-    oversize_limit = 1.15
-    oversize_delta = 15000.0
-    undersize_limit = 0.9
+  # @param sizing_condition [String] The sizing condition of the current HPXML HVAC system 
+  # @return [Array<Double, Double, Double>] Oversize limit (frac), oversize delta (Btu/hr), undersize limit (frac)
+  def self.get_hvac_size_limits(hvac_cooling, hvac_sizing_methodology, hvac_size_cooling_cap, sizing_condition, climate_j_shr)
+    if not hvac_cooling.nil?
+      if hvac_cooling.compressor_type == HPXML::HVACCompressorTypeSingleStage && 
+
+      #Table N.2.3.1 ACCA Man. S 2023
+      oversize_limit = 1.15
+      oversize_delta = 15000.0
+      undersize_limit = 0.9
 
     if not hvac_cooling.nil?
       if hvac_cooling.compressor_type == HPXML::HVACCompressorTypeTwoStage
@@ -1700,7 +1706,7 @@ module HVACSizing
       end
     end
 
-    return oversize_limit, oversize_delta, undersize_limit
+    return oversize_factor, oversize_delta, undersize_factor
   end
 
   # Transfers the design load totals from the HVAC loads object to the HVAC sizings object.
