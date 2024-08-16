@@ -3090,8 +3090,10 @@ module HVACSizing
   # @return [Double] Heat pump backup load (Btu/hr)
   def self.calculate_heat_pump_backup_load(mj, hvac_heating, heating_load, hp_nominal_heating_capacity, hvac_heating_speed, hpxml_bldg)
     if hpxml_bldg.header.heat_pump_backup_sizing_methodology == HPXML::HeatPumpBackupSizingEmergency
-      # Size backup to meet full design load in case heat pump fails
-      return heating_load
+      # Size backup to meet 85% of design load in case heat pump fails
+      # New ACCA Man S (2024)--> emergency heating load is 85% of heating load
+      # See Table N1.16.3.2 Electric Resistance Emergency Heat
+      return 0.85*heating_load
     elsif hpxml_bldg.header.heat_pump_backup_sizing_methodology == HPXML::HeatPumpBackupSizingSupplemental
       if not hvac_heating.backup_heating_switchover_temp.nil?
         min_compressor_temp = hvac_heating.backup_heating_switchover_temp
